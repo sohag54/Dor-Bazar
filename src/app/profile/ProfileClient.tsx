@@ -7,16 +7,16 @@ import { authClient } from '@/lib/auth-client';
 
 export default function ProfileClient() {
   const router = useRouter();
-  const { data: session } = authClient.useSession();
-  const [name, setName] = useState('Rezwan Ahmed');
-  const [email, setEmail] = useState('rezwanahmed@gmail.com');
+  const { data: session, isPending } = authClient.useSession();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user) {
-      if (session.user.name) setName(session.user.name);
-      if (session.user.email) setEmail(session.user.email);
+      setName(session.user.name || '');
+      setEmail(session.user.email || '');
     }
   }, [session]);
 
@@ -53,6 +53,9 @@ export default function ProfileClient() {
     }
   };
 
+  const displayName = name || session?.user?.name || 'ব্যবহারকারী';
+  const displayEmail = email || session?.user?.email || '';
+
   return (
     <div className="space-y-6">
       {/* Title & Subtitle */}
@@ -68,15 +71,15 @@ export default function ProfileClient() {
       {/* Top Card: User Info & Sign Out */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0 text-2xl">
-            🧔🏻‍♂️
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-amber-100 border border-amber-200 overflow-hidden flex items-center justify-center flex-shrink-0 text-2xl font-bold text-amber-800">
+            {displayName ? displayName.charAt(0) : '🧔🏻‍♂️'}
           </div>
           <div>
             <h2 className="font-bold text-slate-900 text-sm sm:text-base leading-tight">
-              {name}
+              {displayName}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 font-normal">
-              {email}
+              {displayEmail}
             </p>
           </div>
         </div>

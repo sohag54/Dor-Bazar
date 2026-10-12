@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Category } from '@/types';
 import { getBanglaDate } from '@/lib/utils';
 import { ChevronDown, User, LogOut } from 'lucide-react';
+import { authClient } from '@/lib/auth-client';
 
 interface NavbarProps {
   categories: Category[];
@@ -19,11 +20,12 @@ export default function Navbar({
   categories,
   activeCategory = '',
   onSelectCategory,
-  authMode = 'user',
+  authMode,
 }: NavbarProps) {
   const router = useRouter();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const banglaDate = getBanglaDate();
+  const { data: session, isPending } = authClient.useSession();
 
   const handleCategoryClick = (slug: string) => {
     if (onSelectCategory) {
@@ -32,6 +34,28 @@ export default function Navbar({
       router.push(`/category/${slug}`);
     }
   };
+
+  const handleSignOut = async () => {
+    setShowProfileMenu(false);
+    try {
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push('/signin');
+          },
+        },
+      });
+    } catch {
+      router.push('/signin');
+    }
+  };
+
+  // Determine dynamic user info from active Better Auth session
+  const user = session?.user;
+  const isLoggedIn = !!user;
+  const fullName = user?.name || 'ব্যবহারকারী';
+  const shortName = user?.name ? user.name.trim().split(' ')[0] : 'প্রোফাইল';
+  const email = user?.email || '';
 
   return (
     <header className="w-full bg-[#f3f6f4] border-b border-slate-200/80 sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
@@ -62,7 +86,7 @@ export default function Navbar({
         </Link>
 
         {/* Right Auth / Profile Button */}
-        {authMode === 'guest' ? (
+        {authMode === 'guest' || (!isLoggedIn && !isPending) ? (
           <div className="flex items-center gap-3">
             <Link
               href="/signin"
@@ -84,36 +108,51 @@ export default function Navbar({
               className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/80 border border-slate-200 hover:border-emerald-300 hover:shadow-xs transition-all text-xs font-medium text-slate-700 cursor-pointer"
             >
               <div className="w-6 h-6 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-[10px] font-bold text-amber-800 overflow-hidden">
-                <span className="text-xs">🧔🏻‍♂️</span>
+                {user?.image ? (
+                  <Image
+                    src={user.image}
+                    alt={fullName}
+                    width={24}
+                    height={24}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <span className="text-xs">🧔🏻‍♂️</span>
+                )}
               </div>
-              <span className="font-semibold text-slate-800">Rezwan</span>
+              <span className="font-semibold text-slate-800 truncate max-w-[120px]">{shortName}</span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {/* Profile Dropdown */}
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-150 py-1.5 z-50 text-xs">
-                <div className="px-3.5 py-2 border-b border-slate-100">
-                  <p className="font-semibold text-slate-800">Rezwan Ahmed</p>
-                  <p className="text-[11px] text-slate-400 truncate">rezwanahmed@gmail.com</p>
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowProfileMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-150 py-1.5 z-50 text-xs">
+                  <div className="px-3.5 py-2 border-b border-slate-100">
+                    <p className="font-semibold text-slate-800 truncate">{fullName}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{email}</p>
+                  </div>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 transition-colors"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>আমার প্রোফাইল</span>
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-600 transition-colors border-t border-slate-100 text-left cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>সাইন আউট</span>
+                  </button>
                 </div>
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 px-3.5 py-2 hover:bg-slate-50 text-slate-700 transition-colors"
-                  onClick={() => setShowProfileMenu(false)}
-                >
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>আমার প্রোফাইল</span>
-                </Link>
-                <Link
-                  href="/signin"
-                  className="flex items-center gap-2 px-3.5 py-2 hover:bg-rose-50 text-rose-600 transition-colors border-t border-slate-100"
-                  onClick={() => setShowProfileMenu(false)}
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>সাইন আউট</span>
-                </Link>
-              </div>
+              </>
             )}
           </div>
         )}
